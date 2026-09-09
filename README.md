@@ -1,4 +1,4 @@
-# Persona Adapter 1.3.1
+# Persona Adapter 1.3.2
 
 직접 선택한 Character 세계관에 맞춰 Base Persona를 재작성하는 Marinara Engine External Extension입니다. 별도 API key 없이 Marinara에 설정된 LLM 연결을 사용합니다.
 
@@ -6,7 +6,7 @@
 
 1. Marinara 서버의 `.env`에 `ENABLE_EXTERNAL_EXTENSIONS=true`를 설정하고 서버를 재시작합니다.
 2. **Settings → Advanced → Danger Zone → Allow third-party extension imports**를 켭니다.
-3. **Settings → Addons → External Extensions**에서 `dist/persona-adapter.marinara-extension.json` **한 파일만** 가져옵니다. 이 파일은 확장 설치 파일이며 Persona 가져오기 화면에 넣는 파일이 아닙니다.
+3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.3.2.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
 4. 가져온 코드와 **Full page access** 권한을 확인하고 해당 버전의 hash를 승인·활성화합니다. 전체 페이지 권한은 기존 Marinara API 호출과 별도 편집 패널에 필요합니다.
 5. 페이지 왼쪽 아래 **Persona Adapter** 버튼을 누릅니다.
 
@@ -93,3 +93,11 @@ UI: 출력 필드명을 제외한 주요 선택기·섹션·버튼을 한글화�
 본문에서 선택한 캐릭터와 페르소나의 이름 대신 각각 `{{char}}`, `{{user}}`를 사용하도록 생성·필드 재생성·번역 지침을 추가했습니다. Name 필드의 실제 이름과 무관한 인명·지명은 유지합니다. 대사의 자연스러운 나/너 표현은 유지하되 이름으로 특정하는 경우 placeholder를 사용합니다.
 
 번역 시 사용자가 직접 넣은 참여자 이름을 placeholder로 정규화할 수 있도록 추가 발생을 허용하며, 기존 placeholder 개수가 줄어드는 것은 계속 거부합니다. 이는 모델 지침과 개수 검사이며 모든 이름 치환의 의미 정확성을 보장하는 검사는 아닙니다.
+
+## 1.3.2 변경
+
+- 밝은 회민트 배경과 짙은 녹색 입력·출력 칸으로 UI를 변경했습니다.
+- 패널 너비, 간격, 버튼 높이와 모서리를 줄이고 닫기 버튼을 작은 ×로 바꿨습니다.
+- 안내문과 새로고침을 같은 줄로 배치하고 결과 필드 작업 버튼을 간결하게 정리했습니다.
+- 생성 로직, 상태 관리와 API 동작은 유지했습니다.
+- 단위 테스트 17개와 브라우저 통합 테스트가 통과했으며, 사용자가 설치 ZIP의 UI와 실제 동작을 확인했습니다.

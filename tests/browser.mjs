@@ -103,6 +103,12 @@ try {
   await mkdir(new URL('../test-results/', import.meta.url), { recursive: true });
   await page.screenshot({ path: fileURLToPath(new URL('../test-results/desktop.png', import.meta.url)) });
   await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: fileURLToPath(new URL('../test-results/mobile.png', import.meta.url)) });
+  await page.locator('.body').evaluate(e => { e.scrollTop = 0; });
+  await page.screenshot({ path: fileURLToPath(new URL('../test-results/mobile-settings.png', import.meta.url)) });
+  assert.ok(await page.locator('.body').evaluate(e => e.scrollWidth <= e.clientWidth), 'Mobile panel must not overflow horizontally');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: fileURLToPath(new URL('../test-results/desktop-settings.png', import.meta.url)) });
+  await page.setViewportSize({ width: 390, height: 844 });
   await button('전체 다시 생성').click(); await page.getByLabel('원본 페르소나', { exact: true }).selectOption('p2');
   await expect(page.getByText('Personality가 비어 있습니다. 직접 특성을 추가하거나 빈 목록으로 생성할 수 있습니다.')).toBeVisible();
   await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0); await expect(page.getByLabel('특성 1', { exact: true })).toHaveCount(0);

@@ -117,9 +117,9 @@ export function mount(marinara, css) {
     launcher.setAttribute('aria-expanded', String(state.open)); view.append(launcher);
     if (!state.open) return;
     const panel = el('section', undefined, 'panel'); panel.setAttribute('aria-label', 'Persona Adapter');
-    const header = el('header'); header.append(el('h1', 'Persona Adapter'), button('닫기', () => { state.open = false; render(); lastFocus?.focus?.(); })); panel.append(header);
+    const header = el('header'); const close = button('×', () => { state.open = false; render(); lastFocus?.focus?.(); }, false, 'close'); close.setAttribute('aria-label', '닫기'); header.append(el('h1', 'Persona Adapter'), close); panel.append(header);
     const body = el('div', undefined, 'body'); panel.append(body); view.append(panel);
-    body.append(el('p', '원본의 핵심 성격을 지키며, 새로운 세계에 어울리는 페르소나를 만듭니다.', 'muted'));
+    panel.setAttribute('aria-description', '원본의 핵심 성격을 지키며, 새로운 세계에 어울리는 페르소나를 만듭니다.');
     if (state.busy) { const status = el('p', state.busy + '…', 'status'); status.setAttribute('role', 'status'); body.append(status); }
     if (state.error) { const error = el('p', state.error, 'error'); error.setAttribute('role', 'alert'); body.append(error); }
     if (state.notice) { const note = el('p', state.notice, 'notice'); note.setAttribute('role', 'status'); body.append(note); }
@@ -130,8 +130,8 @@ export function mount(marinara, css) {
     if (state.initialized && !state.personas.length) body.append(el('p', '원본 페르소나를 선택해주세요. Marinara의 Personas에서 먼저 만들어주세요.', 'error'));
     body.append(select('Marinara 모델 연결', state.connections.map(c => ({ id: c.id, label: `${c.name} · ${c.model}` })), state.connectionId, id => { edited(); state.connectionId = id; }));
     if (state.initialized && !state.connections.length) body.append(el('p', 'Marinara에서 모델이 설정된 연결을 먼저 추가해주세요.', 'error'));
-    body.append(button('목록 새로고침 · 결과 초기화', initialize, !!state.busy, 'subtle refresh'));
-    body.append(el('p', '캐릭터·원본 페르소나를 바꾸면 생성 결과가 초기화됩니다.', 'muted'));
+    const refreshRow = el('div', undefined, 'refresh-row');
+    refreshRow.append(el('p', '선택을 바꾸면 생성 결과가 초기화됩니다.', 'muted'), button('목록 새로고침 · 결과 초기화', initialize, !!state.busy, 'subtle refresh')); body.append(refreshRow);
     body.append(el('h2', '핵심 성격'));
     body.append(el('p', '생성 전에 핵심 성격을 확인하고 수정하세요. 모든 모드에서 유지합니다.', 'muted'));
     if (state.persona && !state.persona.personality.trim()) body.append(el('p', 'Personality가 비어 있습니다. 직접 특성을 추가하거나 빈 목록으로 생성할 수 있습니다.', 'muted'));
@@ -155,7 +155,7 @@ export function mount(marinara, css) {
       b.setAttribute('aria-pressed', String(state.mode === mode)); b.append(el('small', description)); modes.append(b);
     } body.append(modes);
     body.append(el('h2', '분량'));
-    const lengths = el('div', undefined, 'actions'); lengths.setAttribute('role', 'group'); lengths.setAttribute('aria-label', '분량');
+    const lengths = el('div', undefined, 'actions lengths'); lengths.setAttribute('role', 'group'); lengths.setAttribute('aria-label', '분량');
     for (const length of ['Short', 'Normal', 'Long']) {
       const b = button({ Short: '짧게', Normal: '보통', Long: '길게' }[length], () => { edited(); state.length = length; render(); }, false, state.length === length ? 'selected' : '');
       b.setAttribute('aria-pressed', String(state.length === length)); lengths.append(b);
@@ -165,24 +165,24 @@ export function mount(marinara, css) {
     body.append(button('페르소나 생성', () => adapt(), !ready || !!state.busy, 'primary'));
     if (!state.traits.some(t => t.trim())) body.append(el('p', '현재 핵심 성격 목록이 비어 있습니다. 보존할 성격이 있다면 분석하거나 직접 추가해주세요.', 'muted'));
     if (!state.original) { body.scrollTop = scrollTop; return; }
-    body.append(el('h2', '생성 결과'));
-    const tabs = el('div', undefined, 'actions');
+    const resultHeader = el('div', undefined, 'result-header'); resultHeader.append(el('h2', '생성 결과'));
+    const tabs = el('div', undefined, 'actions tabs');
     for (const tab of ['original', 'english']) tabs.append(button(tab === 'original' ? '원본' : '영어', () => { state.tab = tab; render(); }, !state[tab], state.tab === tab ? 'selected' : ''));
-    body.append(tabs);
+    resultHeader.append(tabs); body.append(resultHeader);
     const stale = el('p', '원본이 변경되었습니다. 영어는 이전 번역입니다. 필요하면 다시 번역해주세요.', 'muted'); stale.id = 'english-stale'; stale.hidden = !state.englishStale; body.append(stale);
     const current = state[state.tab];
     for (const field of FIELDS) {
       const wrapper = el('div', undefined, 'field'); const bar = el('div', undefined, 'fieldbar');
       const label = el('label', LABELS[field]); label.htmlFor = `pa-${field}`; bar.append(label);
-      if (field !== 'name') bar.append(button(`${LABELS[field]} 다시 생성`, () => adapt(true, field), !!state.busy || !ready, 'subtle'));
-      bar.append(button(`${LABELS[field]} 복사`, () => copy(state[state.tab][field]), false, 'subtle')); wrapper.append(bar);
+      if (field !== 'name') { const reroll = button('↻', () => adapt(true, field), !!state.busy || !ready, 'subtle reroll'); reroll.setAttribute('aria-label', `${LABELS[field]} 다시 생성`); reroll.title = `${LABELS[field]} 다시 생성`; bar.append(reroll); }
+      const copyButton = button('복사', () => copy(state[state.tab][field]), false, 'subtle'); copyButton.setAttribute('aria-label', `${LABELS[field]} 복사`); bar.append(copyButton); wrapper.append(bar);
       const editor = el(field === 'name' ? 'input' : 'textarea'); editor.id = `pa-${field}`; editor.value = current[field]; editor.dataset.focus = field;
-      if (field !== 'name') editor.rows = 5;
+      if (field !== 'name') editor.rows = 3;
       const tab = state.tab;
       editor.oninput = () => { state[tab][field] = editor.value; edited(); if (tab === 'original' && state.english) { state.englishStale = true; root.querySelector('#english-stale').hidden = false; state.notice = '원본이 변경되었습니다. 영어를 갱신하려면 다시 번역해주세요.'; } };
       wrapper.append(editor); body.append(wrapper);
     }
-    const actions = el('div', undefined, 'actions');
+    const actions = el('div', undefined, 'actions result-actions');
     actions.append(button('전체 다시 생성', () => adapt(true), !!state.busy || !ready), button('영어로 번역', translate, !!state.busy || !ready), button('전체 복사', () => copy(copyAll(state[state.tab]))), button('JSON 저장', download));
     body.append(actions, el('p', 'JSON은 Marinara의 Personas → Import에서 가져올 수 있습니다. 자동 저장은 하지 않습니다. 결과는 이 페이지 메모리에만 보관됩니다.', 'muted'));
     body.scrollTop = scrollTop;
