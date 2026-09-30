@@ -57,3 +57,7 @@
 변경 파일: `src/ui.js`(Undo 상태·버튼 제거, Length 상태/선택 및 generation 전달, 배너 제거/요소 이동), `src/model.js`(복원 helper 제거), `src/prompts.js`(독립 Length 전략, Core 의미 정정, Creative 외형, 번역 분리), 테스트 2개 파일(Undo 테스트 제거 및 새 정책 검증), build/package 메타데이터와 dist(1.2.0), README와 본 기록. API endpoint 및 Marinara 본체 소스 변경은 없습니다.
 
 단위 테스트 14개와 fixture 기반 Chrome 검증을 통과했습니다. 실제 LLM의 외형 다양성·분량·비사칭 성향·Example Lines 품질 검증은 수행하지 않았습니다. Persona Length는 별도의 확장 generation 입력이며 Marinara raw API에 지원하지 않는 새 body parameter를 추가하지 않습니다.
+
+## 1.4.0 선택형 로어북 참조
+
+공식 main `12a0acd5b7823abeaf3e05ad39a3a07d957e9ffc`에서 확인했습니다. `GET /api/lorebooks?characterId=...`는 캐릭터 연결 목록을, `GET /api/lorebooks/:id/entries`와 `/folders`는 항목과 폴더를 반환합니다. 명세의 v1 로어북 제외 제한은 사용자의 선택형 참조 확장 요청으로 변경하며, 명세 파일은 수정하지 않았습니다. 본체 변경 없이 기존 full_page_access와 동일 출처 API를 사용합니다.

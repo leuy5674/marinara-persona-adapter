@@ -1,4 +1,4 @@
-# Persona Adapter 1.3.2
+# Persona Adapter 1.4.0
 
 직접 선택한 Character 세계관에 맞춰 Base Persona를 재작성하는 Marinara Engine External Extension입니다. 별도 API key 없이 Marinara에 설정된 LLM 연결을 사용합니다.
 
@@ -6,7 +6,7 @@
 
 1. Marinara 서버의 `.env`에 `ENABLE_EXTERNAL_EXTENSIONS=true`를 설정하고 서버를 재시작합니다.
 2. **Settings → Advanced → Danger Zone → Allow third-party extension imports**를 켭니다.
-3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.3.2.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
+3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.4.0.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
 4. 가져온 코드와 **Full page access** 권한을 확인하고 해당 버전의 hash를 승인·활성화합니다. 전체 페이지 권한은 기존 Marinara API 호출과 별도 편집 패널에 필요합니다.
 5. 페이지 왼쪽 아래 **Persona Adapter** 버튼을 누릅니다.
 
@@ -27,7 +27,7 @@ Character·Base Persona 변경 및 목록 새로고침은 결과를 초기화합
 
 ## 포함 기능과 제한
 
-- Character의 Description, Personality, Backstory, Appearance, Scenario, First Message를 모두 사용합니다. Lorebook을 조회·탐색하거나 LLM에 전달하지 않습니다.
+- Character의 Description, Personality, Backstory, Appearance, Scenario, First Message를 모두 사용합니다. 캐릭터에 연결된 로어북 중 사용자가 선택한 책의 활성 항목을 생성·리롤에 참고합니다. 캐릭터 카드 내장 로어북을 자동으로 추가하지 않습니다.
 - Core Personality 추출, 세 모드, 전체/필드 Reroll, Length 선택, 영어 번역, 필드 편집, 복사, JSON 내보내기를 제공합니다.
 - 생성/Reroll은 trait가 있으면 추가 LLM 검사를 수행합니다. 따라서 보통 생성 1회와 검증 1회의 요청이 발생하며 기존 연결의 사용량이 소모됩니다. 모델에 의한 의미 검증은 완벽하지 않으므로 결과를 검토해주세요.
 - raw API가 범용 `responseFormat` 인자를 제공하지 않아 JSON schema를 프롬프트로 요청하고 엄격한 JSON 타입 검사를 적용합니다. Markdown/설명문을 섞은 응답은 임의 파싱하지 않고 오류로 처리합니다.
@@ -101,3 +101,11 @@ UI: 출력 필드명을 제외한 주요 선택기·섹션·버튼을 한글화�
 - 안내문과 새로고침을 같은 줄로 배치하고 결과 필드 작업 버튼을 간결하게 정리했습니다.
 - 생성 로직, 상태 관리와 API 동작은 유지했습니다.
 - 단위 테스트 17개와 브라우저 통합 테스트가 통과했으며, 사용자가 설치 ZIP의 UI와 실제 동작을 확인했습니다.
+
+## 1.4.0 변경
+
+캐릭터 선택 아래에 연결된 로어북 체크 목록을 추가했습니다. 기본값은 모두 제외이며, 선택을 바꾸면 생성 결과가 초기화됩니다. 비활성 책·항목·폴더는 제외합니다. 선택한 책의 항목은 생성 및 리롤 직전에 읽으며, 읽기 실패 시 로어북을 몰래 생략하지 않고 오류를 표시합니다. 모두 해제하면 기존 방식으로 생성합니다.
+
+로어북은 세계관 참고 자료로만 사용하며 핵심 성격 규칙을 덮어쓰지 않습니다. 채팅의 키워드 트리거, 검색·임베딩, 조건부 활성화나 매크로 실행을 재현하지 않습니다. 입력이 너무 크면 기존 요청 길이 제한 오류를 표시하므로 선택한 책 수를 줄여주세요. 기존 UI 색상과 조밀한 배치는 유지했습니다.
+
+페르소나 선택 목록은 `이름 (제목/설명)`으로 표시합니다. 제목/설명이 비어 있으면 이름만 표시하며, 생성용 이름과 본문은 변경하지 않습니다.

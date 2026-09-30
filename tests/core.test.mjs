@@ -128,3 +128,13 @@ test('translation may add normalized name placeholders but cannot remove existin
   assertPlaceholders({ description: '{{user}} met Hana' }, { description: '{{user}} met {{char}}' }, ['description']);
   assert.throws(() => assertPlaceholders({ description: '{{user}} met {{char}}' }, { description: '{{user}} met Hana' }, ['description']));
 });
+
+
+test('lorebook projection excludes disabled entries and nested disabled folders', async () => {
+  const { lorebookContext } = await import('../src/model.js');
+  const folders = [{ id: 'off', enabled: false }, { id: 'child', enabled: true, parentFolderId: 'off' }];
+  const entries = [{ name: 'World', content: 'kept', enabled: true, secret: 'private' },
+    { content: 'disabled', enabled: false }, { content: 'nested', enabled: true, folderId: 'child' }];
+  assert.deepEqual(lorebookContext({ name: 'Book' }, entries, folders), { name: 'Book', entries: [{ name: 'World', content: 'kept' }] });
+  assert.throws(() => lorebookContext({}, {}, []));
+});

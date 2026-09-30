@@ -1,4 +1,4 @@
-import { FIELDS, LABELS, personaFields, characterFields, copyAll, exportName } from './model.js';
+import { FIELDS, LABELS, personaFields, characterFields, copyAll, exportName, lorebookContext } from './model.js';
 import { createApi } from './api.js';
 import { createGeneration } from './generation.js';
 
@@ -11,7 +11,7 @@ export function mount(marinara, css) {
   const view = document.createElement('div'); root.append(view); document.body.append(host);
   const api = createApi(marinara), generation = createGeneration(api);
   const state = { open: false, personas: [], connections: [], characters: [], characterId: '', personaId: '',
-    character: null, persona: null, connectionId: '', mode: 'Preserve', traits: [], analyzed: false,
+    lorebooks: [], selectedLorebooks: [], lorebookError: '', character: null, persona: null, connectionId: '', mode: 'Preserve', traits: [], analyzed: false,
     original: null, english: null, tab: 'original', length: 'Normal', language: '', busy: null, error: '', notice: '', initialized: false, englishStale: false };
   let revision = 0, controller = null, alive = true, lastFocus = null;
   function edited() { revision++; }
@@ -36,14 +36,17 @@ export function mount(marinara, css) {
   }
   async function initialize() {
     invalidate(); state.character = state.persona = null; state.characterId = state.personaId = ''; state.characters = []; resetTraits();
-    state.initialized = false;
+    state.initialized = false; state.lorebooks = []; state.selectedLorebooks = []; state.lorebookError = '';
     await task('목록 불러오는 중', async signal => {
       const data = await Promise.all(['/characters?includeBuiltIn=false', '/characters/personas/list', '/connections'].map(p => api.get(p, signal)));
       if (data.some(d => !Array.isArray(d))) throw new Error('목록 형식이 현재 확장과 호환되지 않습니다. Marinara 버전을 확인해주세요.');
       return data;
     }, ([characters, personas, connections]) => {
       state.characters = characters.map(record => ({ id: record.id, name: characterFields(record).name || '이름 없는 Character' }));
-      state.personas = personas; state.connections = connections.filter(c => c.model);
+      state.personas = personas.map(p => {
+        const comment = typeof p.comment === 'string' ? p.comment.trim().replace(/\s+/g, ' ') : '';
+        return { ...p, label: comment ? `${p.name || '이름 없는 페르소나'} (${comment})` : p.name || '이름 없는 페르소나' };
+      }); state.connections = connections.filter(c => c.model);
       const active = personas.find(p => p.isActive === true || p.isActive === 'true');
       state.personaId = active?.id || ''; state.persona = active ? personaFields(active) : null;
       state.connectionId = state.connections.find(c => c.isDefault === true || c.isDefault === 'true')?.id || state.connections[0]?.id || '';
@@ -52,10 +55,22 @@ export function mount(marinara, css) {
     });
   }
   async function selectCharacter(id) {
-    invalidate(); state.characterId = id; state.character = null;
+    invalidate(); state.characterId = id; state.character = null; state.lorebooks = []; state.selectedLorebooks = []; state.lorebookError = '';
     if (!id) { render(); return; }
-    await task('캐릭터 불러오는 중', signal => api.get(`/characters/${encodeURIComponent(id)}`, signal), record => {
+    await task('캐릭터 불러오는 중', async signal => {
+      const record = await api.get(`/characters/${encodeURIComponent(id)}`, signal);
+      try {
+        const books = await api.get(`/lorebooks?characterId=${encodeURIComponent(id)}`, signal);
+        if (!Array.isArray(books)) throw new Error('로어북 목록 형식을 읽을 수 없습니다.');
+        return { record, books, error: '' };
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        return { record, books: [], error: '로어북 목록을 읽지 못했습니다. 캐릭터를 다시 선택해 재시도하세요. ' + error.message };
+      }
+    }, ({ record, books, error }) => {
       state.character = { id: record.id, ...characterFields(record) };
+      state.lorebooks = books.map(b => ({ id: b.id, name: b.name, enabled: b.enabled !== false && b.enabled !== 'false' }));
+      state.lorebookError = error;
     });
   }
   async function selectPersona(id) {
@@ -73,8 +88,20 @@ export function mount(marinara, css) {
   function adapt(reroll = false, field = null) {
     const tab = reroll ? state.tab : 'original';
     const data = dataFor(tab, field); const connection = state.connectionId;
+    const books = state.lorebooks.filter(b => b.enabled && state.selectedLorebooks.includes(b.id));
     task(field ? `${LABELS[field]} 다시 생성 중` : reroll ? '전체 다시 생성 중' : '페르소나 생성 중',
-      signal => generation.adapt(data, connection, signal, field), result => {
+      async signal => {
+        if (books.length) {
+          data.lorebooks = await Promise.all(books.map(async book => {
+            const [entries, folders] = await Promise.all([
+              api.get(`/lorebooks/${encodeURIComponent(book.id)}/entries`, signal),
+              api.get(`/lorebooks/${encodeURIComponent(book.id)}/folders`, signal)
+            ]);
+            return lorebookContext(book, entries, folders);
+          }));
+        }
+        return generation.adapt(data, connection, signal, field);
+      }, result => {
         if (!reroll) { state.english = null; state.englishStale = false; state.tab = 'original'; }
         state[tab] = field ? { ...state[tab], ...result } : result;
         if (tab === 'original' && state.english) { state.englishStale = true; state.notice = '원본이 변경되었습니다. 영어는 이전 번역이며 다시 번역할 수 있습니다.'; }
@@ -125,6 +152,28 @@ export function mount(marinara, css) {
     if (state.notice) { const note = el('p', state.notice, 'notice'); note.setAttribute('role', 'status'); body.append(note); }
     const sourceLoading = ['목록 불러오는 중', '캐릭터 불러오는 중', '페르소나 불러오는 중'].includes(state.busy);
     body.append(select('캐릭터', state.characters, state.characterId, selectCharacter, !state.initialized || sourceLoading || !state.characters.length));
+    if (state.characterId) {
+      const section = el('div', undefined, 'lorebooks');
+      section.append(el('span', '참고할 로어북', 'lorebook-heading'));
+      if (sourceLoading) section.append(el('span', '불러오는 중…', 'muted'));
+      else if (state.lorebookError) section.append(el('p', state.lorebookError, 'error'));
+      else if (!state.lorebooks.length) section.append(el('span', '연결된 로어북 없음', 'muted'));
+      else {
+        const list = el('div', undefined, 'lorebook-list');
+        for (const book of state.lorebooks) {
+          const label = el('label', undefined, 'lorebook-option'); const check = el('input'); check.type = 'checkbox';
+          check.checked = state.selectedLorebooks.includes(book.id); check.disabled = !book.enabled;
+          check.onchange = () => {
+            invalidate();
+            state.selectedLorebooks = check.checked ? [...state.selectedLorebooks, book.id] : state.selectedLorebooks.filter(id => id !== book.id);
+            render();
+          };
+          label.append(check, el('span', (book.name || '이름 없는 로어북') + (book.enabled ? '' : ' (비활성)'))); list.append(label);
+        }
+        section.append(list, el('small', '선택한 책의 활성 항목만 참조합니다. 변경하면 결과가 초기화됩니다.'));
+      }
+      body.append(section);
+    }
     body.append(select('원본 페르소나', state.personas, state.personaId, selectPersona, !state.initialized || sourceLoading || !state.personas.length));
     if (state.initialized && !state.characters.length) body.append(el('p', '현재 사용할 수 있는 캐릭터가 없습니다.', 'error'));
     if (state.initialized && !state.personas.length) body.append(el('p', '원본 페르소나를 선택해주세요. Marinara의 Personas에서 먼저 만들어주세요.', 'error'));

@@ -11,13 +11,17 @@ try {
   const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.evaluate(() => {
-    const p = { id: 'p1', name: '샘플 페르소나', description: '원본 {{user}}', personality: '조용하고 신중함', backstory: '과거', appearance: '외모', scenario: '{{char}} 곁' };
+    const p = { id: 'p1', name: '샘플 페르소나', comment: '현대 세계관', description: '원본 {{user}}', personality: '조용하고 신중함', backstory: '과거', appearance: '외모', scenario: '{{char}} 곁' };
     window.fixture = { emptyCharacters: false, requests: [], counter: 0, delay: 0, failure: '', downloads: [], p };
     window.cleanup = [];
     window.marinara = { onCleanup: f => cleanup.push(f), setTimeout: (callback, delay) => window.setTimeout(callback, delay), async fetch(path, options) {
       fixture.requests.push({ path, options });
       const respond = x => new Response(JSON.stringify(x));
       if (path === '/api/characters?includeBuiltIn=false') return respond(fixture.emptyCharacters ? [] : ['ch1', 'ch2'].map(id => ({ id, data: JSON.stringify({ name: id === 'ch1' ? '숲의 수호자' : '상인' }) })));
+      if (path.startsWith('/api/lorebooks?')) return respond(path.endsWith('ch1') ? [{ id: 'world', name: '세계관 설정', enabled: true }, { id: 'secret', name: '제외할 설정', enabled: true }] : []);
+      if (path === '/api/lorebooks/world/entries' && fixture.loreFailure) return new Response('', { status: 500 });
+      if (path === '/api/lorebooks/world/entries') return respond([{ content: 'SELECTED_WORLD_REFERENCE', enabled: true }, { content: 'DISABLED_REFERENCE', enabled: false }]);
+      if (path === '/api/lorebooks/world/folders') return respond([]);
       if (path === '/api/connections') return respond([{ id: 'llm', name: '기존 연결', model: 'test', isDefault: true }]);
       if (path === '/api/characters/personas/list') return respond([p, { ...p, id: 'p2', name: '다른 Persona', personality: '' }]);
       if (path === '/api/characters/personas/p1') return respond(p);
@@ -44,9 +48,12 @@ try {
   await button('Persona Adapter').click();
   await expect(page.getByLabel('채팅', { exact: true })).toHaveCount(0);
   await page.getByLabel('원본 페르소나', { exact: true }).selectOption('p1');
+  await expect(page.getByLabel('원본 페르소나', { exact: true }).locator('option:checked')).toHaveText('샘플 페르소나 (현대 세계관)');
   await expect(button('성격 분석')).toBeEnabled();
   await page.getByLabel('캐릭터', { exact: true }).selectOption('ch1');
   await expect(page.getByLabel('원본 페르소나', { exact: true })).toHaveValue('p1');
+  await expect(page.getByRole('checkbox', { name: '세계관 설정', exact: true })).not.toBeChecked();
+  await page.getByRole('checkbox', { name: '세계관 설정', exact: true }).check();
   await button('성격 분석').click(); await expect(page.getByLabel('특성 1', { exact: true })).toHaveValue('reserved');
   await page.getByLabel('특성 1', { exact: true }).fill('신중함'); await button('+ 특성 추가').click(); await page.getByLabel('특성 3', { exact: true }).fill('curious');
   await button('특성 2 삭제').click(); await expect(page.getByLabel('특성 2', { exact: true })).toHaveValue('curious');
@@ -119,6 +126,21 @@ try {
   await button('전체 다시 생성').click(); await page.getByLabel('캐릭터', { exact: true }).selectOption('ch2');
   await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0);
   await expect(button('페르소나 생성')).toBeEnabled();
+  await expect(page.getByText('연결된 로어북 없음', { exact: true })).toBeVisible();
+  await page.evaluate(() => { fixture.delay = 0; });
+  await page.getByLabel('캐릭터', { exact: true }).selectOption('ch1');
+  const worldCheck = page.getByRole('checkbox', { name: '세계관 설정', exact: true });
+  await expect(worldCheck).not.toBeChecked();
+  await worldCheck.check();
+  await page.evaluate(() => { fixture.loreFailure = true; });
+  await button('페르소나 생성').click();
+  await expect(page.getByRole('alert')).toContainText('실패');
+  await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0);
+  await worldCheck.uncheck();
+  await button('페르소나 생성').click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('샘플 페르소나');
+  const plain = await page.evaluate(() => JSON.parse(fixture.requests.filter(r => r.path === '/api/generate/raw').at(-1).options.body).messages[1].content);
+  assert.ok(!plain.includes('SELECTED_WORLD_REFERENCE'));
   await page.evaluate(() => { fixture.emptyCharacters = true; });
   await button('목록 새로고침 · 결과 초기화').click();
   await expect(page.getByText('현재 사용할 수 있는 캐릭터가 없습니다.', { exact: true })).toBeVisible();
@@ -126,6 +148,9 @@ try {
   const requests = await page.evaluate(() => fixture.requests);
   const generations = requests.filter(r => r.path === '/api/generate/raw').map(r => JSON.parse(r.options.body)).filter(r => /Create a complete new|Regenerate ONLY/.test(r.messages[0].content));
   assert.ok(generations.length > 3);
+  assert.ok(generations.some(r => JSON.stringify(r).includes('SELECTED_WORLD_REFERENCE')));
+  assert.ok(generations.every(r => !JSON.stringify(r).includes('DISABLED_REFERENCE')));
+  assert.ok(!requests.some(r => r.path.includes('/lorebooks/secret/')));
   assert.ok(generations.every(r => ['Long', 'Short'].includes(JSON.parse(r.messages[1].content).length)));
   assert.ok(generations.some(r => JSON.parse(r.messages[1].content).length === 'Short'));
   await button('짧게').click(); await expect(button('짧게')).toHaveAttribute('aria-pressed', 'true');

@@ -44,3 +44,23 @@ export function assertPlaceholders(before, after, fields) {
 }
 export function copyAll(value) { return FIELDS.map(f => `${LABELS[f]}:\n${value[f]}`).join('\n\n'); }
 export function exportName(value) { return `persona-adapted-${(value.name || 'persona').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80)}.json`; }
+
+// Only explicitly selected, enabled world-reference text crosses into generation.
+export function lorebookContext(book, entries, folders) {
+  if (!Array.isArray(entries) || !Array.isArray(folders)) throw new Error('로어북 항목 형식을 읽을 수 없습니다.');
+  const disabled = value => value === false || value === 'false';
+  const byId = new Map(folders.map(f => [f.id, f]));
+  function allowedFolder(id) {
+    const seen = new Set();
+    while (id) {
+      if (seen.has(id) || !byId.has(id)) return false;
+      seen.add(id); const folder = byId.get(id);
+      if (disabled(folder.enabled)) return false;
+      id = folder.parentFolderId;
+    }
+    return true;
+  }
+  return { name: String(book.name || '이름 없는 로어북'), entries: entries
+    .filter(e => !disabled(e.enabled) && allowedFolder(e.folderId) && typeof e.content === 'string' && e.content.trim())
+    .map(e => ({ name: String(e.name || e.comment || ''), content: e.content })) };
+}
