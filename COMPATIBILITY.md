@@ -61,3 +61,7 @@
 ## 1.4.0 선택형 로어북 참조
 
 공식 main `12a0acd5b7823abeaf3e05ad39a3a07d957e9ffc`에서 확인했습니다. `GET /api/lorebooks?characterId=...`는 캐릭터 연결 목록을, `GET /api/lorebooks/:id/entries`와 `/folders`는 항목과 폴더를 반환합니다. 명세의 v1 로어북 제외 제한은 사용자의 선택형 참조 확장 요청으로 변경하며, 명세 파일은 수정하지 않았습니다. 본체 변경 없이 기존 full_page_access와 동일 출처 API를 사용합니다.
+
+## 1.5.0 추가 지침
+
+공식 main `e5ead06ac2fe1cb3e039f8cab7e4d266b01dac44`의 `routes/generate/raw-route.ts`에서 기존 messages 기반 비스트리밍 요청 구조를 확인했습니다. 추가 지침은 기존 user 메시지의 선택 필드로 전달하며 본체 API 변경은 없습니다.

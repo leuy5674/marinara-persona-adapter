@@ -1,4 +1,4 @@
-# Persona Adapter 1.4.0
+# Persona Adapter 1.5.0
 
 직접 선택한 Character 세계관에 맞춰 Base Persona를 재작성하는 Marinara Engine External Extension입니다. 별도 API key 없이 Marinara에 설정된 LLM 연결을 사용합니다.
 
@@ -6,7 +6,7 @@
 
 1. Marinara 서버의 `.env`에 `ENABLE_EXTERNAL_EXTENSIONS=true`를 설정하고 서버를 재시작합니다.
 2. **Settings → Advanced → Danger Zone → Allow third-party extension imports**를 켭니다.
-3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.4.0.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
+3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.5.0.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
 4. 가져온 코드와 **Full page access** 권한을 확인하고 해당 버전의 hash를 승인·활성화합니다. 전체 페이지 권한은 기존 Marinara API 호출과 별도 편집 패널에 필요합니다.
 5. 페이지 왼쪽 아래 **Persona Adapter** 버튼을 누릅니다.
 
@@ -109,3 +109,7 @@ UI: 출력 필드명을 제외한 주요 선택기·섹션·버튼을 한글화�
 로어북은 세계관 참고 자료로만 사용하며 핵심 성격 규칙을 덮어쓰지 않습니다. 채팅의 키워드 트리거, 검색·임베딩, 조건부 활성화나 매크로 실행을 재현하지 않습니다. 입력이 너무 크면 기존 요청 길이 제한 오류를 표시하므로 선택한 책 수를 줄여주세요. 기존 UI 색상과 조밀한 배치는 유지했습니다.
 
 페르소나 선택 목록은 `이름 (제목/설명)`으로 표시합니다. 제목/설명이 비어 있으면 이름만 표시하며, 생성용 이름과 본문은 변경하지 않습니다.
+
+## 1.5.0 변경
+
+생성 언어 아래에 추가 지침(선택) 입력칸을 추가했습니다. 비우거나 공백만 입력하면 기존처럼 동작합니다. 입력한 지침은 전체 생성·전체 리롤·필드별 리롤에 적용되며, 핵심 성격과 기존 모드·출력 규칙을 유지합니다. 번역·성격 분석에는 전달하지 않습니다. 입력은 페이지 메모리에만 보관되며, 입력 변경 전에 시작한 생성 응답은 적용하지 않습니다.

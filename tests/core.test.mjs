@@ -138,3 +138,13 @@ test('lorebook projection excludes disabled entries and nested disabled folders'
   assert.deepEqual(lorebookContext({ name: 'Book' }, entries, folders), { name: 'Book', entries: [{ name: 'World', content: 'kept' }] });
   assert.throws(() => lorebookContext({}, {}, []));
 });
+
+
+test('optional instructions are scoped to adaptation and field rerolls', () => {
+  const data = { mode: 'Preserve', additionalInstructions: 'Be a librarian.' };
+  for (const task of ['adapt', 'field']) {
+    assert.match(prompt(task, data, schemaFor())[0].content, /Apply additionalInstructions/);
+    assert.doesNotMatch(prompt(task, { ...data, additionalInstructions: '  ' }, schemaFor())[0].content, /Apply additionalInstructions/);
+  }
+  for (const task of ['translate', 'analyze', 'verify']) assert.doesNotMatch(prompt(task, data, schemaFor())[0].content, /Apply additionalInstructions/);
+});

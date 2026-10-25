@@ -92,12 +92,14 @@ try {
   assert.equal(download.suggestedFilename(), 'persona-adapted-샘플 페르소나.json');
   const exported = JSON.parse(await readFile(await download.path(), 'utf8')); assert.equal(exported.description, 'English 사용자 수정 {{user}}');
   await button('원본').click();
+  await page.getByLabel('추가 지침 (선택)', { exact: true }).fill('직업은 사서로 설정해주세요.\n외형은 유지해주세요.');
   await button('짧게').click();
   await button('Personality 다시 생성').click();
   await expect(page.getByLabel('Personality', { exact: true })).toHaveValue(/rerolled/);
   await expect(page.getByLabel('Description', { exact: true })).toHaveValue('사용자 수정 {{user}}');
   const shortRequest = await page.evaluate(() => fixture.requests.filter(r => r.path === '/api/generate/raw' && JSON.parse(r.options.body).messages[0].content.includes('Regenerate ONLY')).at(-1));
   assert.equal(JSON.parse(JSON.parse(shortRequest.options.body).messages[1].content).length, 'Short');
+  assert.equal(JSON.parse(JSON.parse(shortRequest.options.body).messages[1].content).additionalInstructions, '직업은 사서로 설정해주세요.\n외형은 유지해주세요.');
   assert.match(JSON.parse(shortRequest.options.body).messages[0].content, /Do not generate Example Lines/);
   await button('길게').click();
   await page.evaluate(() => { fixture.failure = 'json'; }); await button('전체 다시 생성').click(); await expect(page.getByRole('alert')).toContainText('형식');
@@ -148,6 +150,8 @@ try {
   const requests = await page.evaluate(() => fixture.requests);
   const generations = requests.filter(r => r.path === '/api/generate/raw').map(r => JSON.parse(r.options.body)).filter(r => /Create a complete new|Regenerate ONLY/.test(r.messages[0].content));
   assert.ok(generations.length > 3);
+  assert.ok(generations.some(r => !('additionalInstructions' in JSON.parse(r.messages[1].content))));
+  assert.ok(generations.some(r => r.messages[0].content.includes('Create a complete new') && JSON.parse(r.messages[1].content).additionalInstructions));
   assert.ok(generations.some(r => JSON.stringify(r).includes('SELECTED_WORLD_REFERENCE')));
   assert.ok(generations.every(r => !JSON.stringify(r).includes('DISABLED_REFERENCE')));
   assert.ok(!requests.some(r => r.path.includes('/lorebooks/secret/')));

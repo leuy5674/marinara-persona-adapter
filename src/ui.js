@@ -12,7 +12,7 @@ export function mount(marinara, css) {
   const api = createApi(marinara), generation = createGeneration(api);
   const state = { open: false, personas: [], connections: [], characters: [], characterId: '', personaId: '',
     lorebooks: [], selectedLorebooks: [], lorebookError: '', character: null, persona: null, connectionId: '', mode: 'Preserve', traits: [], analyzed: false,
-    original: null, english: null, tab: 'original', length: 'Normal', language: '', busy: null, error: '', notice: '', initialized: false, englishStale: false };
+    original: null, english: null, tab: 'original', length: 'Normal', language: '', additionalInstructions: '', busy: null, error: '', notice: '', initialized: false, englishStale: false };
   let revision = 0, controller = null, alive = true, lastFocus = null;
   function edited() { revision++; }
   function invalidate() {
@@ -80,6 +80,7 @@ export function mount(marinara, css) {
   }
   function dataFor(tab, field) {
     return { character: personaCharacter(), original: { ...state.persona }, traits: state.traits.map(t => t.trim()).filter(Boolean),
+      ...(state.additionalInstructions.trim() ? { additionalInstructions: state.additionalInstructions.trim() } : {}),
       mode: state.mode, length: state.length, language: tab === 'english' ? 'English' : state.language.trim() || 'Use the original Persona language; if empty, use the Character language.',
       ...(field ? { targetField: field, current: { ...state[tab] } } : {}) };
   }
@@ -211,6 +212,12 @@ export function mount(marinara, css) {
     }
     body.append(lengths);
     const language = el('label', '생성 언어 (선택)'); const input = el('input'); input.value = state.language; input.placeholder = '비워두면 원본 페르소나 언어'; input.dataset.focus = 'language'; input.oninput = () => { state.language = input.value; edited(); }; language.append(input); body.append(language);
+    const extraLabel = el('label', '추가 지침 (선택)', 'additional-instructions');
+    const extra = el('textarea'); extra.rows = 3; extra.value = state.additionalInstructions;
+    extra.placeholder = '예: 직업은 사서로, 캐릭터와는 처음 만나는 사이로 설정해주세요.';
+    extra.dataset.focus = 'additional-instructions';
+    extra.oninput = () => { state.additionalInstructions = extra.value; edited(); };
+    extraLabel.append(extra); body.append(extraLabel);
     body.append(button('페르소나 생성', () => adapt(), !ready || !!state.busy, 'primary'));
     if (!state.traits.some(t => t.trim())) body.append(el('p', '현재 핵심 성격 목록이 비어 있습니다. 보존할 성격이 있다면 분석하거나 직접 추가해주세요.', 'muted'));
     if (!state.original) { body.scrollTop = scrollTop; return; }
