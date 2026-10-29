@@ -1,4 +1,4 @@
-import { FIELDS, LABELS, personaFields, characterFields, copyAll, exportName, lorebookContext } from './model.js';
+import { FIELDS, LABELS, personaFields, characterFields, characterGreetings, selectedGreeting, copyAll, exportName, lorebookContext } from './model.js';
 import { createApi } from './api.js';
 import { createGeneration } from './generation.js';
 
@@ -10,7 +10,7 @@ export function mount(marinara, css) {
   const style = document.createElement('style'); style.textContent = css; root.append(style);
   const view = document.createElement('div'); root.append(view); document.body.append(host);
   const api = createApi(marinara), generation = createGeneration(api);
-  const state = { open: false, personas: [], connections: [], characters: [], characterId: '', personaId: '',
+  const state = { open: false, personas: [], connections: [], characters: [], characterId: '', personaId: '', greetings: [], greetingId: 'default',
     lorebooks: [], selectedLorebooks: [], lorebookError: '', character: null, persona: null, connectionId: '', mode: 'Preserve', traits: [], analyzed: false,
     original: null, english: null, tab: 'original', length: 'Normal', language: '', additionalInstructions: '', busy: null, error: '', notice: '', initialized: false, englishStale: false };
   let revision = 0, controller = null, alive = true, lastFocus = null;
@@ -35,7 +35,7 @@ export function mount(marinara, css) {
     }
   }
   async function initialize() {
-    invalidate(); state.character = state.persona = null; state.characterId = state.personaId = ''; state.characters = []; resetTraits();
+    invalidate(); state.character = state.persona = null; state.characterId = state.personaId = ''; state.characters = []; state.greetings = []; state.greetingId = 'default'; resetTraits();
     state.initialized = false; state.lorebooks = []; state.selectedLorebooks = []; state.lorebookError = '';
     await task('목록 불러오는 중', async signal => {
       const data = await Promise.all(['/characters?includeBuiltIn=false', '/characters/personas/list', '/connections'].map(p => api.get(p, signal)));
@@ -55,7 +55,7 @@ export function mount(marinara, css) {
     });
   }
   async function selectCharacter(id) {
-    invalidate(); state.characterId = id; state.character = null; state.lorebooks = []; state.selectedLorebooks = []; state.lorebookError = '';
+    invalidate(); state.characterId = id; state.character = null; state.greetings = []; state.greetingId = 'default'; state.lorebooks = []; state.selectedLorebooks = []; state.lorebookError = '';
     if (!id) { render(); return; }
     await task('캐릭터 불러오는 중', async signal => {
       const record = await api.get(`/characters/${encodeURIComponent(id)}`, signal);
@@ -69,6 +69,7 @@ export function mount(marinara, css) {
       }
     }, ({ record, books, error }) => {
       state.character = { id: record.id, ...characterFields(record) };
+      state.greetings = characterGreetings(record);
       state.lorebooks = books.map(b => ({ id: b.id, name: b.name, enabled: b.enabled !== false && b.enabled !== 'false' }));
       state.lorebookError = error;
     });
@@ -85,7 +86,7 @@ export function mount(marinara, css) {
       ...(field ? { targetField: field, current: { ...state[tab] } } : {}) };
   }
   // Only the seven specified Character fields leave this boundary; never include card books or messages.
-  function personaCharacter() { const { id, ...context } = state.character; return context; }
+  function personaCharacter() { const { id, ...context } = state.character; return { ...context, firstMes: selectedGreeting(state.greetings, state.greetingId) }; }
   function adapt(reroll = false, field = null) {
     const tab = reroll ? state.tab : 'original';
     const data = dataFor(tab, field); const connection = state.connectionId;
@@ -153,6 +154,15 @@ export function mount(marinara, css) {
     if (state.notice) { const note = el('p', state.notice, 'notice'); note.setAttribute('role', 'status'); body.append(note); }
     const sourceLoading = ['목록 불러오는 중', '캐릭터 불러오는 중', '페르소나 불러오는 중'].includes(state.busy);
     body.append(select('캐릭터', state.characters, state.characterId, selectCharacter, !state.initialized || sourceLoading || !state.characters.length));
+    if (state.character && !sourceLoading) {
+      body.append(select('참고할 첫 메시지', state.greetings, state.greetingId, id => {
+        if (!state.greetings.some(e => e.id === id)) { render(); return; }
+        invalidate(); state.greetingId = id; render();
+      }));
+      const preview = el('details', undefined, 'greeting-preview');
+      preview.append(el('summary', '선택한 첫 메시지 보기'), el('pre', selectedGreeting(state.greetings, state.greetingId) || '(비어 있는 첫 메시지입니다.)'));
+      body.append(preview);
+    }
     if (state.characterId) {
       const section = el('div', undefined, 'lorebooks');
       section.append(el('span', '참고할 로어북', 'lorebook-heading'));

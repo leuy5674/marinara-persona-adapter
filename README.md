@@ -6,7 +6,7 @@
 
 1. Marinara 서버의 `.env`에 `ENABLE_EXTERNAL_EXTENSIONS=true`를 설정하고 서버를 재시작합니다.
 2. **Settings → Advanced → Danger Zone → Allow third-party extension imports**를 켭니다.
-3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.5.0.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
+3. [최신 Release](https://github.com/leuy5674/marinara-persona-adapter/releases/latest)에서 `persona-adapter-v1.6.0.personal-extension.zip`을 다운로드하고, 압축을 풀지 않고 **Settings → Addons → External Extensions**에서 가져옵니다. `Source code` 압축파일은 개발용입니다. 소스에서 직접 설치할 때는 `dist/persona-adapter.marinara-extension.json` 한 파일로도 설치할 수 있습니다.
 4. 가져온 코드와 **Full page access** 권한을 확인하고 해당 버전의 hash를 승인·활성화합니다. 전체 페이지 권한은 기존 Marinara API 호출과 별도 편집 패널에 필요합니다.
 5. 페이지 왼쪽 아래 **Persona Adapter** 버튼을 누릅니다.
 
@@ -113,3 +113,7 @@ UI: 출력 필드명을 제외한 주요 선택기·섹션·버튼을 한글화�
 ## 1.5.0 변경
 
 생성 언어 아래에 추가 지침(선택) 입력칸을 추가했습니다. 비우거나 공백만 입력하면 기존처럼 동작합니다. 입력한 지침은 전체 생성·전체 리롤·필드별 리롤에 적용되며, 핵심 성격과 기존 모드·출력 규칙을 유지합니다. 번역·성격 분석에는 전달하지 않습니다. 입력은 페이지 메모리에만 보관되며, 입력 변경 전에 시작한 생성 응답은 적용하지 않습니다.
+
+## 첫 메시지 선택 (1.6.0)
+
+캐릭터 선택 후 **참고할 첫 메시지**에서 기본/추가 첫 메시지 중 하나를 선택합니다. 기본값은 기본 첫 메시지이며, **선택한 첫 메시지 보기**로 전문을 확인할 수 있습니다. 생성·전체/항목 리롤에는 선택한 메시지만 전달하며 다른 시작 상황을 합치지 않습니다. 선택을 변경하면 이전 결과와 번역은 초기화되지만 핵심 성격은 유지됩니다. 캐릭터를 변경하거나 목록을 새로고침하면 기본 첫 메시지로 돌아갑니다. 채팅에서 선택한 시작 상황을 자동으로 따라가지 않습니다.

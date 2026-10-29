@@ -3,7 +3,7 @@
   "version": 1,
   "config": {
     "name": "Persona Adapter",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "Adapt a Persona to a selected Character while preserving editable Core Personality. Uses your Marinara LLM connection.",
     "runtime": "client",
     "capabilities": [

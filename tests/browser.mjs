@@ -26,7 +26,7 @@ try {
       if (path === '/api/characters/personas/list') return respond([p, { ...p, id: 'p2', name: '다른 Persona', personality: '' }]);
       if (path === '/api/characters/personas/p1') return respond(p);
       if (path === '/api/characters/personas/p2') return respond({ ...p, id: 'p2', name: '다른 Persona', personality: '' });
-      if (path.startsWith('/api/characters/ch')) return respond({ id: path.split('/').pop(), data: JSON.stringify({ name: path.endsWith('ch1') ? '숲의 수호자' : '상인', description: '숲 세계', personality: '친절함', extensions: { backstory: '숲의 역사', appearance: '녹색 옷' }, scenario: '만남', first_mes: '{{user}} 반가워', character_book: { entries: ['LOREBOOK_MUST_NOT_APPEAR'] } }) });
+      if (path.startsWith('/api/characters/ch')) return respond({ id: path.split('/').pop(), data: JSON.stringify({ name: path.endsWith('ch1') ? '숲의 수호자' : '상인', description: '숲 세계', personality: '친절함', extensions: { backstory: '숲의 역사', appearance: '녹색 옷' }, scenario: '만남', first_mes: '{{user}} 반가워', alternate_greetings: path.endsWith('ch1') ? ['SELECTED_LIBRARY_OPENING {{user}}', 'UNSELECTED_CASTLE_OPENING'] : [], character_book: { entries: ['LOREBOOK_MUST_NOT_APPEAR'] } }) });
       if (path === '/api/generate/raw') {
         const body = JSON.parse(options.body), system = body.messages[0].content, data = JSON.parse(body.messages[1].content);
         const failure = fixture.failure; fixture.failure = '';
@@ -52,6 +52,10 @@ try {
   await expect(button('성격 분석')).toBeEnabled();
   await page.getByLabel('캐릭터', { exact: true }).selectOption('ch1');
   await expect(page.getByLabel('원본 페르소나', { exact: true })).toHaveValue('p1');
+  await expect(page.getByLabel('참고할 첫 메시지', { exact: true })).toHaveValue('default');
+  await page.getByLabel('참고할 첫 메시지', { exact: true }).selectOption('alt:0');
+  await page.getByText('선택한 첫 메시지 보기', { exact: true }).click();
+  await expect(page.locator('.greeting-preview pre')).toHaveText('SELECTED_LIBRARY_OPENING {{user}}');
   await expect(page.getByRole('checkbox', { name: '세계관 설정', exact: true })).not.toBeChecked();
   await page.getByRole('checkbox', { name: '세계관 설정', exact: true }).check();
   await button('성격 분석').click(); await expect(page.getByLabel('특성 1', { exact: true })).toHaveValue('reserved');
@@ -83,6 +87,10 @@ try {
   await expect(button('Undo Reroll')).toHaveCount(0);
   await button('영어로 번역').click(); await expect(page.getByLabel('Description', { exact: true })).toHaveValue('English 사용자 수정 {{user}}');
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('샘플 페르소나');
+  const openingRequests = await page.evaluate(() => fixture.requests.filter(r => r.path === '/api/generate/raw').map(r => JSON.parse(r.options.body)).map(r => JSON.parse(r.messages[1].content)).filter(d => d.character));
+  assert.ok(openingRequests.length >= 4);
+  assert.ok(openingRequests.every(d => d.character.firstMes === 'SELECTED_LIBRARY_OPENING {{user}}'));
+  assert.ok(openingRequests.every(d => !JSON.stringify(d).includes('UNSELECTED_CASTLE_OPENING')));
   await button('Scenario 다시 생성').click(); await expect(page.getByLabel('Scenario', { exact: true })).toHaveValue(/rerolled/);
   assert.equal(await page.evaluate(() => JSON.parse(fixture.requests.filter(r => r.path === '/api/generate/raw' && JSON.parse(r.options.body).messages[0].content.includes('Regenerate ONLY')).at(-1).options.body).messages[1].content).then(JSON.parse).then(d => d.language), 'English');
   await button('원본').click(); await expect(page.getByLabel('Description', { exact: true })).toHaveValue('사용자 수정 {{user}}');
@@ -118,7 +126,12 @@ try {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: fileURLToPath(new URL('../test-results/desktop-settings.png', import.meta.url)) });
   await page.setViewportSize({ width: 390, height: 844 });
-  await button('전체 다시 생성').click(); await page.getByLabel('원본 페르소나', { exact: true }).selectOption('p2');
+  await button('전체 다시 생성').click(); await page.getByLabel('참고할 첫 메시지', { exact: true }).selectOption('default');
+  await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('특성 1', { exact: true })).toHaveValue('신중함');
+  await page.waitForTimeout(600);
+  await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0);
+  await button('페르소나 생성').click(); await page.getByLabel('원본 페르소나', { exact: true }).selectOption('p2');
   await expect(page.getByText('Personality가 비어 있습니다. 직접 특성을 추가하거나 빈 목록으로 생성할 수 있습니다.')).toBeVisible();
   await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0); await expect(page.getByLabel('특성 1', { exact: true })).toHaveCount(0);
   await page.evaluate(() => { fixture.delay = 0; });
@@ -129,6 +142,8 @@ try {
   await expect(page.getByLabel('Name', { exact: true })).toHaveCount(0);
   await expect(button('페르소나 생성')).toBeEnabled();
   await expect(page.getByText('연결된 로어북 없음', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('참고할 첫 메시지', { exact: true })).toHaveValue('default');
+  await expect(page.getByLabel('참고할 첫 메시지', { exact: true }).locator('option')).toHaveCount(2);
   await page.evaluate(() => { fixture.delay = 0; });
   await page.getByLabel('캐릭터', { exact: true }).selectOption('ch1');
   const worldCheck = page.getByRole('checkbox', { name: '세계관 설정', exact: true });

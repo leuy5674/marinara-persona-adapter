@@ -65,3 +65,7 @@
 ## 1.5.0 추가 지침
 
 공식 main `e5ead06ac2fe1cb3e039f8cab7e4d266b01dac44`의 `routes/generate/raw-route.ts`에서 기존 messages 기반 비스트리밍 요청 구조를 확인했습니다. 추가 지침은 기존 user 메시지의 선택 필드로 전달하며 본체 API 변경은 없습니다.
+
+## 1.6.0 첫 메시지 선택 (2026-10-29)
+
+공식 HEAD `e5ead06ac2fe1cb3e039f8cab7e4d266b01dac44`의 `packages/shared/src/types/character.ts`에서 `first_mes: string`, `alternate_greetings: string[]`를 확인했습니다. 기존 캐릭터 상세 API의 data에서 읽으며 본체/명세 파일은 수정하지 않습니다. 기본/추가 첫 메시지 목록은 UI 상태에만 두고 선택한 문자열 하나만 generation context의 firstMes로 전달합니다. 선택 변경 시 진행 중 응답을 폐기하고 결과/번역을 초기화합니다. 핵심 성격은 유지합니다.

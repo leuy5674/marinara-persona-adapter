@@ -4,16 +4,33 @@ export const textValue = value => typeof value === 'string' ? value : '';
 export function personaFields(value = {}) {
   return Object.fromEntries(FIELDS.map(f => [f, textValue(value[f])]));
 }
-export function characterFields(record) {
+function characterData(record) {
   // GET /characters/:id returns the database row with serialized JSON data.
   let d = record?.data;
   try { if (typeof d === 'string') d = JSON.parse(d); }
   catch { throw new Error('Character 카드의 JSON 데이터를 읽을 수 없습니다. 카드 데이터를 확인해주세요.'); }
   if (!d || typeof d !== 'object' || Array.isArray(d))
     throw new Error('Character 카드 데이터가 비어 있거나 지원하지 않는 형식입니다.');
+  return d;
+}
+export function characterFields(record) {
+  const d = characterData(record);
   return { name: textValue(d.name), description: textValue(d.description), personality: textValue(d.personality),
     backstory: textValue(d.extensions?.backstory), appearance: textValue(d.extensions?.appearance),
     scenario: textValue(d.scenario), firstMes: textValue(d.first_mes) };
+}
+export function characterGreetings(record) {
+  const d = characterData(record);
+  const entries = [{ id: 'default', title: '기본 첫 메시지', content: textValue(d.first_mes) }];
+  if (Array.isArray(d.alternate_greetings)) d.alternate_greetings.forEach((content, i) => {
+    if (typeof content === 'string') entries.push({ id: `alt:${i}`, title: `추가 첫 메시지 ${i + 1}`, content });
+  });
+  return entries.map(e => ({ ...e, label: `${e.title} · ${e.content.trim().replace(/\s+/g, ' ').slice(0, 45) || '(비어 있음)'}` }));
+}
+export function selectedGreeting(entries, id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) throw new Error('선택한 첫 메시지를 찾을 수 없습니다. 캐릭터를 다시 선택해주세요.');
+  return entry.content;
 }
 export function schemaFor(fields = FIELDS) {
   return { type: 'object', additionalProperties: false, required: fields,

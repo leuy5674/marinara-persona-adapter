@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FIELDS, characterFields, personaFields, parseResult, schemaFor, TRAIT_SCHEMA, assertPlaceholders, copyAll, exportName } from '../src/model.js';
+import { FIELDS, characterFields, characterGreetings, selectedGreeting, personaFields, parseResult, schemaFor, TRAIT_SCHEMA, assertPlaceholders, copyAll, exportName } from '../src/model.js';
 import { prompt, MODES, LENGTHS } from '../src/prompts.js';
 import { createGeneration } from '../src/generation.js';
 import { createApi } from '../src/api.js';
@@ -147,4 +147,16 @@ test('optional instructions are scoped to adaptation and field rerolls', () => {
     assert.doesNotMatch(prompt(task, { ...data, additionalInstructions: '  ' }, schemaFor())[0].content, /Apply additionalInstructions/);
   }
   for (const task of ['translate', 'analyze', 'verify']) assert.doesNotMatch(prompt(task, data, schemaFor())[0].content, /Apply additionalInstructions/);
+});
+
+test('greetings preserve original indices and empty defaults without sending alternatives in fields', () => {
+  const record = { data: JSON.stringify({ first_mes: '', alternate_greetings: ['Forest', null, 'Library', ''] }) };
+  const list = characterGreetings(record);
+  assert.deepEqual(list.map(e => e.id), ['default', 'alt:0', 'alt:2', 'alt:3']);
+  assert.equal(selectedGreeting(list, 'default'), '');
+  assert.equal(selectedGreeting(list, 'alt:2'), 'Library');
+  assert.throws(() => selectedGreeting(list, 'alt:1'), /찾을 수 없습니다/);
+  assert.equal(characterFields(record).firstMes, '');
+  assert.ok(!JSON.stringify(characterFields(record)).includes('Library'));
+  assert.equal(characterGreetings({ data: {} }).length, 1);
 });
